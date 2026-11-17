@@ -76,6 +76,66 @@ N이 2배 증가하면 연산 횟수는 4배 증가(제곱 비례).
 실측 시간도 이 비율을 따르며, 아래 성능 분석 표에서 확인 가능하다.
 
 
+### 시간 측정 경계
+
+I/O(JSON 파싱, 출력)를 제외하고 **순수 연산 구간**만 측정한다.
+`time.perf_counter()`로 `mac()` 함수 호출 직전·직후만 감싸며, 10회 반복 후 평균을 구한다.
+
+```python
+def measure_time(pattern, filter_, repeat=REPEAT):
+    total = 0.0
+    for _ in range(repeat):
+        start = time.perf_counter()   # 시작
+        mac(pattern, filter_)
+        end = time.perf_counter()     # 종료
+        total += (end - start) * 1000
+    return total / repeat
+```
+
+### 라벨 정규화 (normalize_label)
+
+data.json에서 라벨이 일관되지 않을 수 있다:
+- `expected` 값: `'+'` → `Cross`, `'x'` → `X`
+- `filter` 키: `'cross'` → `Cross`, `'x'` → `X`
+
+정규화 없이 비교하면 `'+'`와 `'Cross'`가 다른 것으로 판정되어 FAIL이 발생한다.
+
+```python
+def normalize_label(label):
+    label = label.strip().lower()
+    if label in ('+', 'cross'):
+        return CROSS          # → 'Cross'
+    elif label == 'x':
+        return X              # → 'X'
+    else:
+        raise ValueError(f'알 수 없는 라벨: {label!r}')
+```
+
+### 패턴 키에서 크기 N 추출 및 필터 매칭 로직
+
+패턴 키(`size_5_1`, `size_13_2` 등)에서 정규식으로 N을 추출한 뒤, `size_{N}` 키로 필터를 조회한다.
+
+```python
+match = re.match(r'size_(\d+)_\d+', pattern_id)
+# 'size_5_1' → group(1) = '5'
+# 'size__5_2' → match 실패 → 키 형식 오류 FAIL
+
+n = int(match.group(1))
+size_key = f'size_{n}'          # → 'size_5'
+filter_cross = filters[size_key].get(CROSS)  # 정규화된 키로 조회
+filter_x     = filters[size_key].get(X)
+```
+
+정규식 `r'size_(\d+)_\d+'`는 `size_` 뒤의 숫자 그룹(`\d+`)을 캡처하며, 언더스코어 중복(`size__5_2`) 등 형식 오류는 `match`가 `None`을 반환하여 FAIL로 처리된다.
+
+### 동점 처리 규칙 (모드 1 vs 모드 2)
+
+| 구분 | 동점 판정 | 최종 처리 |
+|------|----------|----------|
+| 모드 1 | `판정 불가` 출력 | 결과 표시 후 종료 (집계 없음) |
+| 모드 2 | `UNDECIDED` 출력 | **FAIL로 집계** |
+
+
 ## 모드 1 — 사용자 입력 (3×3) 실행 로그
 
 ### 정상 동작: B 판정
