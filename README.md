@@ -134,7 +134,7 @@ filter_x     = filters[size_key].get(X)
 ```
 #### 정규식 의미 분석
 
-정규식 문자열 : size_(\d+)_\d+'
+정규식 문자열 : size_(\d+)_\d+
 
 - size_ : size_ 로 시작해야 함 
 - \d : 숫자(0 ~ 9 ) 한자리
