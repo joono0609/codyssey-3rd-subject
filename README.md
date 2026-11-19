@@ -11,7 +11,7 @@
 codyssey-3rd-subject/
 ├── src/
 │   ├── mac.py         # Mac 계산 
-│   └── judge.json     # 판정부분
+│   └── judge.py       # 판정부분
 ├── main.py       # 메인 실행 파일
 ├── data.json     # 5×5, 13×13, 25×25 필터 및 패턴 데이터
 └── README.md
